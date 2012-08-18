@@ -13,7 +13,7 @@
       dependency info."
       :author "Rich Hickey"}
   clojure.core.reducers
-  (:refer-clojure :exclude [reduce map mapcat filter remove take take-while drop drop-while flatten iterate])
+  (:refer-clojure :exclude [reduce map mapcat filter remove take take-while drop drop-while flatten iterate range])
   (:require [clojure.walk :as walk]))
 
 (alias 'core 'clojure.core)
@@ -352,6 +352,47 @@
     clojure.lang.Seqable
     (seq [this]
       (seq (clojure.core/iterate f seed)))))
+
+;;do not construct this directly, use range function
+(deftype Range [start end step]
+  clojure.lang.Counted
+  (count [this]
+    (int (Math/ceil (/ (- end start) step))))
+
+  clojure.lang.Seqable
+  (seq [this]
+    (seq (clojure.core/range start end step)))
+
+  clojure.core.protocols/CollReduce
+  (coll-reduce [this f1] (clojure.core.protocols/coll-reduce this f1 (f1)))
+  (coll-reduce [this f1 init]
+    (let [cmp (if (pos? step) < >)]
+      (loop [ret init, i start]
+        (if (reduced? ret)
+          @ret
+          (if (cmp i end)
+            (recur (f1 ret i) (+ i step))
+            ret)))))
+
+  CollFold
+  (coll-fold [this n combinef reducef]
+    (fold-by-halves (fn [_ size] ;; the range passed is always just this Range
+                      (let [split (-> (quot size 2)
+                                      (* step)
+                                      (+ start))]
+                        [(Range. start split step)
+                         (Range. split end step)]))
+                    this n combinef reducef)))
+
+(defn range
+  "Returns a reducible collection of nums from start (inclusive) to end
+  (exclusive), by step, where start defaults to 0, step to 1, and end
+  to infinity."
+  {:added "1.5"}
+  ([] (iterate inc 0))
+  ([end] (Range. 0 end 1))
+  ([start end] (Range. start end 1))
+  ([start end step] (Range. start end step)))
 
 (defn append!
   ".adds x to acc and returns acc"

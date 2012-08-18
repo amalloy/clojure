@@ -51,6 +51,28 @@
               (r/take 1)
               (into [])))))
 
+(deftest test-range
+  (is (= (take 10000 (range))
+         (->> (r/range)
+              (r/take 10000)
+              (into []))))
+  (is (not (counted? (r/range))))
+  (doseq [argvec [[7000]
+                  [0 5736]
+                  [10000 21 -2]
+                  [0 3710 2/3]
+                  [1 -8642 -2]]]
+    (let [seq-version (apply range argvec)
+          reduce-version (apply r/range argvec)
+          reduced-vector (into [] reduce-version)]
+      (is (counted? reduce-version))
+      (is (= seq-version reduced-vector))
+      (is (= (count reduce-version)
+             (count reduced-vector)))
+      (let [seq-sum (reduce + seq-version)
+            folded-sum (r/fold + reduce-version)
+            vector-fold-sum (r/fold + reduced-vector)]
+        (is (= seq-sum folded-sum vector-fold-sum))))))
 
 (deftest test-sorted-maps
   (let [m (into (sorted-map)
