@@ -44,6 +44,13 @@
   [drop-while r/drop-while #(into [] %)]
   [neg? pos? #(< % 200) #(> % 200) #{-100}])
 
+(deftest test-iterate
+  (is (= [100000]
+         (->> (r/iterate inc 0)
+              (r/drop 1e5)
+              (r/take 1)
+              (into [])))))
+
 
 (deftest test-sorted-maps
   (let [m (into (sorted-map)

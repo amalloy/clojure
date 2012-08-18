@@ -13,7 +13,7 @@
       dependency info."
       :author "Rich Hickey"}
   clojure.core.reducers
-  (:refer-clojure :exclude [reduce map mapcat filter remove take take-while drop drop-while flatten])
+  (:refer-clojure :exclude [reduce map mapcat filter remove take take-while drop drop-while flatten iterate])
   (:require [clojure.walk :as walk]))
 
 (alias 'core 'clojure.core)
@@ -334,6 +334,24 @@
       (zero? (count right)) left
       :else
       (Cat. (+ (count left) (count right)) left right))))
+
+(defcurried iterate
+  "A reducible collection of [seed, (f seed), (f (f seed)), ...]"
+  {:added "1.5"}
+  [f seed]
+  (reify
+    clojure.core.protocols/CollReduce
+    (coll-reduce [this f1] (clojure.core.protocols/coll-reduce this f1 (f1)))
+    (coll-reduce [this f1 init]
+      (loop [ret (f1 init seed), seed seed]
+        (if (reduced? ret)
+          @ret
+          (let [next (f seed)]
+            (recur (f1 ret next) next)))))
+
+    clojure.lang.Seqable
+    (seq [this]
+      (seq (clojure.core/iterate f seed)))))
 
 (defn append!
   ".adds x to acc and returns acc"
