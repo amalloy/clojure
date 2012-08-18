@@ -13,7 +13,7 @@
       dependency info."
       :author "Rich Hickey"}
   clojure.core.reducers
-  (:refer-clojure :exclude [reduce map mapcat filter remove take take-while drop flatten])
+  (:refer-clojure :exclude [reduce map mapcat filter remove take take-while drop drop-while flatten])
   (:require [clojure.walk :as walk]))
 
 (alias 'core 'clojure.core)
@@ -274,6 +274,20 @@
             (if (neg? @cnt)
               (f1 ret k v)
               ret)))))))
+
+(defcurried drop-while
+  "Skips values from the reduction of coll while (pred val) returns logical true."
+  {:added "1.5"}
+  [pred coll]
+  (reducer coll
+    (fn [f1]
+      (let [keeping? (atom false)]
+        (rfn [f1 k]
+          ([ret k v]
+             (if (or @keeping?
+                     (reset! keeping? (not (pred k v))))
+               (f1 ret k v)
+               ret)))))))
 
 ;;do not construct this directly, use cat
 (deftype Cat [cnt left right]

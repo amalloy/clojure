@@ -40,6 +40,10 @@
   [filter r/filter #(into [] %)]
   [even? odd? #(< 200 %) identity])
 
+(defequivtest test-drop-while
+  [drop-while r/drop-while #(into [] %)]
+  [neg? pos? #(< % 200) #(> % 200) #{-100}])
+
 
 (deftest test-sorted-maps
   (let [m (into (sorted-map)
