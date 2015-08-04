@@ -3836,7 +3836,7 @@ static class InvokeExpr implements Expr{
 				} else {
 					gen.putStatic(var.objtype, "__instance", OBJECT_TYPE);
 				}
-                if (context == C.RETURN)
+                if (context != C.STATEMENT)
                     objx.emitVarLean(gen, var);
 				return;
 				}
