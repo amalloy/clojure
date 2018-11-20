@@ -88,6 +88,12 @@
   (testing "don't allow recur across binding"
     (is (thrown? Compiler$CompilerException
                  (eval '(fn [x] (binding [+ *] (recur 1)))))))
+  (testing "don't ignore initial do outside a list"
+    (is (thrown? Compiler$CompilerException
+                 (eval '(let [] do))))
+    (is (thrown? Compiler$CompilerException
+                 (eval '((fn [] do)))))
+    (is (= 1 (eval '(let [do 1] do)))))
   (testing "allow loop/recur inside try"
     (is (= 0 (eval '(try (loop [x 3]
                            (if (zero? x) x (recur (dec x)))))))))

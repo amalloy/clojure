@@ -2311,7 +2311,7 @@ public static class TryExpr implements Expr{
 					if(bodyExpr == null)
 						try {
 							Var.pushThreadBindings(RT.map(NO_RECUR, true, METHOD_RETURN_CONTEXT, null));
-							bodyExpr = (new BodyExpr.Parser()).parse(context, RT.seq(body));
+							bodyExpr = implicitDo(context, body);
 						} finally {
 							Var.popThreadBindings();
 						}
@@ -2338,7 +2338,7 @@ public static class TryExpr implements Expr{
 							                                (Symbol) (RT.second(f) instanceof Symbol ? RT.second(f)
 							                                                                         : null),
 							                                null,false);
-							Expr handler = (new BodyExpr.Parser()).parse(C.EXPRESSION, RT.next(RT.next(RT.next(f))));
+							Expr handler = implicitDo(C.EXPRESSION, RT.next(RT.next(RT.next(f))));
 							catches = catches.cons(new CatchClause(c, lb, handler));
 							}
 						finally
@@ -2354,7 +2354,7 @@ public static class TryExpr implements Expr{
 						try
 							{
 							Var.pushThreadBindings(RT.map(IN_CATCH_FINALLY, RT.T));
-							finallyExpr = (new BodyExpr.Parser()).parse(C.STATEMENT, RT.next(f));
+							finallyExpr = implicitDo(C.STATEMENT, RT.next(f));
 							}
 						finally
 							{
@@ -2370,7 +2370,7 @@ public static class TryExpr implements Expr{
 				try
 					{
 					Var.pushThreadBindings(RT.map(NO_RECUR, true));
-					bodyExpr = (new BodyExpr.Parser()).parse(context, RT.seq(body));
+					bodyExpr = implicitDo(context, body);
 					}
 				finally
 					{
@@ -5464,7 +5464,7 @@ public static class FnMethod extends ObjMethod{
 						getAndIncLocalNum();
 					}
 				}
-			method.body = (new BodyExpr.Parser()).parse(C.RETURN, body);
+			method.body = implicitDo(C.RETURN, body);
 			return method;
 			}
 		finally
@@ -6108,8 +6108,9 @@ public static class BodyExpr implements Expr, MaybePrimitiveExpr{
 	static class Parser implements IParser{
 		public Expr parse(C context, Object frms) {
 			ISeq forms = (ISeq) frms;
-			if(Util.equals(RT.first(forms), DO))
-				forms = RT.next(forms);
+			if(!Util.equals(RT.first(forms), DO))
+				throw new IllegalArgumentException("Didn't start with do");
+			forms = forms.next(); // discard the beginning 'do
 			PersistentVector exprs = PersistentVector.EMPTY;
 			for(; forms != null; forms = forms.next())
 				{
@@ -6247,7 +6248,7 @@ public static class LetFnExpr implements Expr{
 					BindingInit bi = new BindingInit(lb, init);
 					bindingInits = bindingInits.cons(bi);
 					}
-				return new LetFnExpr(bindingInits, (new BodyExpr.Parser()).parse(context, body));
+				return new LetFnExpr(bindingInits, implicitDo(context, body));
 				}
 			finally
 				{
@@ -6433,7 +6434,7 @@ public static class LetExpr implements Expr, MaybePrimitiveExpr{
                                        METHOD_RETURN_CONTEXT, methodReturnContext));
                                                        
 							}
-						bodyExpr = (new BodyExpr.Parser()).parse(isLoop ? C.RETURN : context, body);
+						bodyExpr = implicitDo(isLoop ? C.RETURN : context, body);
 						}
 					finally{
 						if(isLoop)
@@ -6739,6 +6740,10 @@ private static int getAndIncLocalNum(){
 		m.maxLocal = num;
 	NEXT_LOCAL_NUM.set(num + 1);
 	return num;
+}
+
+public static Expr implicitDo(C context, Object form) {
+	return analyze(context, RT.cons(DO, form));
 }
 
 public static Expr analyze(C context, Object form) {
@@ -8549,7 +8554,7 @@ public static class NewInstanceMethod extends ObjMethod{
 			method.methodMeta = RT.meta(name);
 			method.parms = parms;
 			method.argLocals = argLocals;
-			method.body = (new BodyExpr.Parser()).parse(C.RETURN, body);
+			method.body = implicitDo(C.RETURN, body);
 			return method;
 			}
 		finally
